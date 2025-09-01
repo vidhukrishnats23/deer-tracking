@@ -1,7 +1,9 @@
 from fastapi import FastAPI
+from app.ingestion.router import router as ingestion_router
 
 app = FastAPI()
 
+app.include_router(ingestion_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
