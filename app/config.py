@@ -10,8 +10,14 @@ class Settings(BaseSettings):
     max_file_size: int = 10 * 1024 * 1024  # 10 MB
     max_resolution: Tuple[int, int] = (4096, 4096)
     upload_dir: str = "data/raw"
+    processed_dir: str = "data/processed"
     metadata_log_file: str = "data/metadata.log"
 
+    # Augmentation settings
+    augmentation_rotation_angle: int = 15
+    augmentation_scale_factor: float = 0.9
+    augmentation_flip: bool = True
+    normalized_size: Tuple[int, int] = (1024, 1024)
 
     class Config:
         env_file = ".env"

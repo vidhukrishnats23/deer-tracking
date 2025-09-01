@@ -96,3 +96,24 @@ def test_ingest_resolution_too_high():
     assert response.status_code == 400
     assert "exceeds the limit of 10x10 pixels" in response.json()["detail"]
     settings.max_resolution = (4096, 4096) # reset to default
+
+def test_ingest_and_process_success():
+    """
+    Test successful ingestion and processing of an image.
+    """
+    image_bytes = create_dummy_image("jpeg", 200, 200)
+    response = client.post(
+        "/api/v1/ingest",
+        files={"file": ("test_process.jpg", image_bytes, "image/jpeg")},
+    )
+    assert response.status_code == 200
+    metadata = response.json()["metadata"]
+    assert "processed_file_path" in metadata
+    assert "augmentations_applied" in metadata
+
+    processed_path = metadata["processed_file_path"]
+    assert os.path.exists(processed_path)
+
+    # Verify the processed image
+    processed_image = Image.open(processed_path)
+    assert processed_image.size == settings.normalized_size
