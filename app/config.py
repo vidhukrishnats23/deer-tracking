@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     max_resolution: Tuple[int, int] = (4096, 4096)
     upload_dir: str = "data/raw"
     processed_dir: str = "data/processed"
+    labels_dir: str = "data/labels"
     metadata_log_file: str = "data/metadata.log"
 
     # Augmentation settings
