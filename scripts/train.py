@@ -1,6 +1,7 @@
 import os
 import sys
 import base64
+import time
 import pandas as pd
 from ultralytics import YOLO
 from pathlib import Path
@@ -11,7 +12,7 @@ sys.path.append(project_root)
 
 from app.config import settings
 
-def generate_html_report(results):
+def generate_html_report(results, run_name):
     """
     Generate an HTML report from the training results.
     """
@@ -52,7 +53,7 @@ def generate_html_report(results):
     html_content = f"""
     <html>
     <head>
-        <title>YOLO Training Report</title>
+        <title>YOLO Training Report - {run_name}</title>
         <style>
             body {{ font-family: sans-serif; }}
             table {{ border-collapse: collapse; width: 100%; }}
@@ -62,7 +63,7 @@ def generate_html_report(results):
         </style>
     </head>
     <body>
-        <h1>YOLO Training Report</h1>
+        <h1>YOLO Training Report - {run_name}</h1>
         <h2>Metrics</h2>
         {metrics_html}
         {images_html}
@@ -71,7 +72,7 @@ def generate_html_report(results):
     </html>
     """
 
-    report_path = report_dir / f'report_{settings.run_name}.html'
+    report_path = report_dir / f'report_{run_name}.html'
     with open(report_path, 'w') as f:
         f.write(html_content)
     print(f"HTML report generated at {report_path}")
@@ -81,6 +82,9 @@ def train():
     """
     Train the YOLO model with the settings specified in the config file.
     """
+    # Generate a unique run name based on timestamp
+    run_name = time.strftime("%Y%m%d-%H%M%S")
+
     # Load the YOLO model
     model = YOLO(settings.yolo_model)
 
@@ -91,7 +95,7 @@ def train():
         batch=settings.batch_size,
         imgsz=settings.img_size,
         project=settings.project_name,
-        name=settings.run_name,
+        name=run_name,
         plots=True  # Enable plot generation
     )
 
@@ -99,7 +103,7 @@ def train():
     print(f"Model training complete. The model is saved in the '{results.save_dir}' directory.")
 
     # Generate HTML report
-    generate_html_report(results)
+    generate_html_report(results, run_name)
 
 
 if __name__ == "__main__":
