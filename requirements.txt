@@ -8,3 +8,5 @@ rasterio
 python-multipart
 pytest
 httpx
+ultralytics
+pyyaml
