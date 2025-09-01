@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     augmentation_flip: bool = True
     normalized_size: Tuple[int, int] = (1024, 1024)
 
+    # YOLO Training settings
+    yolo_model: str = "yolov8n.pt"
+    epochs: int = 100
+    batch_size: int = 16
+    img_size: int = 640
+    project_name: str = "yolo_training"
+    run_name: str = "exp"
+    data_config: str = "data/data.yaml"
+
     class Config:
         env_file = ".env"
 
