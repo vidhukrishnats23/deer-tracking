@@ -54,13 +54,14 @@ The training hyperparameters are managed in `app/config.py`. You can modify the 
 
 ### 4. Running the Training
 
-To start the training, run the following command from the root of the project:
+To start the training, it is recommended to use the `Makefile`. This provides a simple way to run the entire pipeline.
 
+From the root of the project, run:
 ```bash
-python scripts/train.py
+make train
 ```
 
-The trained model and other artifacts will be saved in the `yolo_training/<run_name>` directory, as specified by the `project_name` and `run_name` in the configuration.
+This command will execute the `scripts/train.py` script. The script now uses a timestamp-based unique ID for each run, so the artifacts for each training session will be saved in a new directory under `yolo_training/`. For example: `yolo_training/20250901-035239/`.
 
 ### 5. Evaluation Report
 
