@@ -1,3 +1,10 @@
 fastapi
 pydantic
+pydantic-settings
 uvicorn
+Pillow
+python-magic
+rasterio
+python-multipart
+pytest
+httpx
