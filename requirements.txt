@@ -10,3 +10,4 @@ pytest
 httpx
 ultralytics
 pyyaml
+pandas
