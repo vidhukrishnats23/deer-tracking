@@ -61,3 +61,9 @@ python scripts/train.py
 ```
 
 The trained model and other artifacts will be saved in the `yolo_training/<run_name>` directory, as specified by the `project_name` and `run_name` in the configuration.
+
+### 5. Evaluation Report
+
+After the training is complete, an HTML report is automatically generated. This report contains the training metrics, plots (including loss curves and confusion matrix), and the training arguments.
+
+The report is saved in the `reports/` directory, with a filename like `report_<run_name>.html`.
