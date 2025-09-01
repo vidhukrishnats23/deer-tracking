@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # YOLO Training settings
     yolo_model: str = "yolov8n.pt"
+    yolo_model_path: str = "yolov8n.pt"
     epochs: int = 100
     batch_size: int = 16
     img_size: int = 640
