@@ -161,6 +161,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+predictions/
 
 # pytype static type analyzer
 .pytype/

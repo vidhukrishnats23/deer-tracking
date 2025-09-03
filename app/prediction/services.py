@@ -1,8 +1,10 @@
 from ultralytics import YOLO
 from app.config import settings
-from PIL import Image
+from PIL import Image, ImageDraw
 import os
 import glob
+import json
+from datetime import datetime
 
 def get_latest_model_path():
     """
@@ -28,9 +30,47 @@ def get_latest_model_path():
 model_path = get_latest_model_path()
 model = YOLO(model_path)
 
-def predict(image: Image.Image):
+def _draw_bounding_boxes(image: Image.Image, predictions):
+    """
+    Draw bounding boxes on an image.
+    """
+    draw = ImageDraw.Draw(image)
+    for box in predictions[0].boxes:
+        x1, y1, x2, y2 = box.xyxy[0].tolist()
+        label = model.names[int(box.cls[0].item())]
+        confidence = box.conf[0].item()
+        draw.rectangle([x1, y1, x2, y2], outline="red", width=2)
+        draw.text((x1, y1), f"{label} ({confidence:.2f})", fill="red")
+    return image
+
+def predict(image: Image.Image, filename: str, save: bool = False):
     """
     Run prediction on a single image.
+    Optionally save the annotated image and prediction data.
     """
     results = model(image)
+
+    if save:
+        # Create a unique directory for each prediction
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        prediction_dir = os.path.join("predictions", f"{filename}_{timestamp}")
+        os.makedirs(prediction_dir, exist_ok=True)
+
+        # Save annotated image
+        annotated_image = _draw_bounding_boxes(image.copy(), results)
+        annotated_image_path = os.path.join(prediction_dir, f"annotated_{filename}")
+        annotated_image.save(annotated_image_path)
+
+        # Save prediction data
+        prediction_data = []
+        for box in results[0].boxes:
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            score = box.conf[0].item()
+            label = model.names[int(box.cls[0].item())]
+            prediction_data.append({"box": [x1, y1, x2, y2], "score": score, "label": label})
+
+        json_path = os.path.join(prediction_dir, "predictions.json")
+        with open(json_path, "w") as f:
+            json.dump(prediction_data, f, indent=4)
+
     return results

@@ -20,9 +20,13 @@ class PredictionResult(BaseModel):
     predictions: List[BoundingBox]
 
 @router.post("/predict/", response_model=List[PredictionResult])
-async def predict_image(files: List[UploadFile] = File(...)):
+async def predict_image(
+    files: List[UploadFile] = File(...),
+    generate_annotated_image: bool = False,
+):
     """
     Accept one or more images and return bounding box predictions.
+    Optionally, generate and save annotated images.
     """
     results = []
     for file in files:
@@ -31,7 +35,7 @@ async def predict_image(files: List[UploadFile] = File(...)):
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid image file")
 
-        prediction = services.predict(image)
+        prediction = services.predict(image, file.filename, save=generate_annotated_image)
 
         # Extract bounding boxes, scores, and labels
         bboxes = []
