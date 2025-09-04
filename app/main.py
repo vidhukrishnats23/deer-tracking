@@ -1,9 +1,45 @@
+import os
+import yaml
 from fastapi import FastAPI
+from app.config import settings
 from app.ingestion.router import router as ingestion_router
 from app.annotation.router import router as annotation_router
 from app.prediction.router import router as prediction_router
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def startup_event():
+    """
+    Startup event handler.
+    Creates required directories and default data configuration file.
+    """
+    # Create required directories
+    required_dirs = [
+        settings.upload_dir,
+        settings.processed_dir,
+        settings.labels_dir,
+        "reports",
+        "data/train/images",
+        "data/train/labels",
+        "data/valid/images",
+        "data/valid/labels",
+    ]
+    for directory in required_dirs:
+        os.makedirs(directory, exist_ok=True)
+
+    # Create data/data.yaml if it doesn't exist
+    if not os.path.exists(settings.data_config):
+        data_config = {
+            "train": "../data/train/images",
+            "val": "../data/valid/images",
+            "nc": 1,
+            "names": ["deer"],
+        }
+        with open(settings.data_config, "w") as f:
+            yaml.dump(data_config, f, default_flow_style=False)
+
 
 app.include_router(ingestion_router, prefix="/api/v1")
 app.include_router(annotation_router, prefix="/api/v1")
