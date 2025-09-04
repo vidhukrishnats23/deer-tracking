@@ -12,20 +12,22 @@ def get_latest_model_path():
     If a trained model is available, use it. Otherwise, use the base model.
     """
     project_dir = settings.project_name
-    if not os.path.isdir(project_dir):
+    if os.path.isdir(project_dir):
+        list_of_runs = glob.glob(os.path.join(project_dir, '*'))
+        if list_of_runs:
+            latest_run = max(list_of_runs, key=os.path.getctime)
+            weights_path = os.path.join(latest_run, 'weights', 'best.pt')
+            if os.path.exists(weights_path):
+                return weights_path
+
+    # If no trained model is found, check if the base model exists
+    if os.path.exists(settings.yolo_model_path):
         return settings.yolo_model_path
-
-    list_of_runs = glob.glob(os.path.join(project_dir, '*'))
-    if not list_of_runs:
-        return settings.yolo_model_path
-
-    latest_run = max(list_of_runs, key=os.path.getctime)
-    weights_path = os.path.join(latest_run, 'weights', 'best.pt')
-
-    if os.path.exists(weights_path):
-        return weights_path
     else:
-        return settings.yolo_model_path
+        raise FileNotFoundError(
+            f"Model file not found at {settings.yolo_model_path}. "
+            "Please ensure the model is available or run the training pipeline."
+        )
 
 model_path = get_latest_model_path()
 model = YOLO(model_path)
