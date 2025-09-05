@@ -5,9 +5,10 @@ import json
 from app.config import settings
 from fastapi import UploadFile
 from app.processing.transformations import process_image
+from app.geospatial.services import reproject_image
 from app.logger import logger
 
-def save_file(file: UploadFile):
+def save_file(file: UploadFile, spatial_metadata: dict = None):
     """
     Save the uploaded file with a unique filename and process it.
     """
@@ -33,6 +34,13 @@ def save_file(file: UploadFile):
         os.rename(temp_file_path, final_file_path)
         file_path = final_file_path
         logger.info(f"Saved file {file.filename} to {file_path}")
+
+        # Reproject the image if it has spatial metadata and a different CRS
+        if spatial_metadata and spatial_metadata.get('crs') and spatial_metadata['crs'] != settings.TARGET_CRS:
+            reprojected_path = os.path.join(settings.processed_dir, f"reprojected_{unique_filename}")
+            reproject_image(file_path, reprojected_path)
+            logger.info(f"Reprojected image for {file.filename} and saved to {reprojected_path}")
+            file_path = reprojected_path
 
         # Process the image
         processed_image_path = process_image(file_path)
@@ -71,7 +79,8 @@ def save_file(file: UploadFile):
                 "scale_factor": settings.augmentation_scale_factor,
                 "flipped": settings.augmentation_flip,
                 "normalized_size": settings.normalized_size,
-            }
+            },
+            "spatial_metadata": spatial_metadata
         }
         logger.info(f"Generated metadata for {file.filename}: {metadata}")
         return metadata

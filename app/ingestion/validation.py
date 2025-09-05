@@ -3,30 +3,34 @@ from PIL import Image
 import rasterio
 import os
 from app.config import settings
+from app.geospatial.utils import extract_spatial_metadata
 
 def validate_file(file):
     """
-    Validate the uploaded file.
+    Validate the uploaded file and extract spatial metadata if available.
     """
     error = validate_format(file)
     if error:
-        return error
+        return error, None
 
     error = validate_size(file)
     if error:
-        return error
+        return error, None
 
-    # Validate for image corruption first
     if file.content_type.startswith("image/"):
         error = validate_image_corruption(file)
         if error:
-            return error
+            return error, None
 
     error = validate_resolution(file)
     if error:
-        return error
+        return error, None
 
-    return None
+    metadata = None
+    if file.content_type == "image/tiff":
+        metadata = extract_spatial_metadata(file)
+
+    return None, metadata
 
 
 def validate_image_corruption(file):

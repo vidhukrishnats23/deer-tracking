@@ -13,12 +13,12 @@ async def ingest_data(file: UploadFile = File(...)):
     """
     try:
         logger.info(f"Ingesting file: {file.filename}")
-        error = validation.validate_file(file)
+        error, spatial_metadata = validation.validate_file(file)
         if error:
             logger.warning(f"Validation error for file {file.filename}: {error}")
             raise HTTPException(status_code=400, detail=error)
 
-        metadata = services.save_file(file)
+        metadata = services.save_file(file, spatial_metadata)
         logger.info(f"Successfully ingested file: {file.filename}")
         return {"message": "Data ingested successfully", "metadata": metadata}
     except HTTPException as e:
