@@ -20,11 +20,18 @@ def save_file(file: UploadFile):
         # Generate a unique filename
         file_extension = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = os.path.join(settings.upload_dir, unique_filename)
 
-        # Save the file
-        with open(file_path, "wb") as buffer:
+        # Create a temporary file path
+        temp_file_path = os.path.join(settings.upload_dir, f"temp_{unique_filename}")
+        final_file_path = os.path.join(settings.upload_dir, unique_filename)
+
+        # Save the file to a temporary location
+        with open(temp_file_path, "wb") as buffer:
             buffer.write(file.file.read())
+
+        # Atomically move the file to its final destination
+        os.rename(temp_file_path, final_file_path)
+        file_path = final_file_path
         logger.info(f"Saved file {file.filename} to {file_path}")
 
         # Process the image

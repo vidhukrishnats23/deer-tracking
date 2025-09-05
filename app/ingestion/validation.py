@@ -16,10 +16,31 @@ def validate_file(file):
     if error:
         return error
 
+    # Validate for image corruption first
+    if file.content_type.startswith("image/"):
+        error = validate_image_corruption(file)
+        if error:
+            return error
+
     error = validate_resolution(file)
     if error:
         return error
 
+    return None
+
+
+def validate_image_corruption(file):
+    """
+    Validate if the image file is corrupted using PIL.
+    """
+    file.file.seek(0)
+    try:
+        img = Image.open(file.file)
+        img.verify()
+    except Exception as e:
+        return f"Image file is corrupted: {e}"
+    finally:
+        file.file.seek(0)
     return None
 
 
