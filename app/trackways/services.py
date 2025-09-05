@@ -98,6 +98,77 @@ def analyze_trackways(start_date: Optional[str] = None, end_date: Optional[str] 
     return results
 
 
+from app.prediction.services import predict as run_prediction
+from app.habitat.services import classify_habitat
+from fastapi import UploadFile
+from PIL import Image
+import io
+import geopandas as gpd
+from shapely.geometry import Point, LineString
+
+async def analyze_trackways_from_image(file: UploadFile, geotiff_path: Optional[str] = None):
+    """
+    Full workflow from image to trackway analysis.
+    """
+    # 1. Run prediction
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes))
+    predictions = run_prediction(image, file.filename)
+
+    # 2. Extract deer detection points
+    deer_points = []
+    for box in predictions[0].boxes:
+        label = predictions[0].names[int(box.cls[0].item())]
+        if label == 'deer':
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            center_x, center_y = (x1 + x2) / 2, (y1 + y2) / 2
+            if geotiff_path:
+                center_x, center_y = pixel_to_geo(center_x, center_y, geotiff_path)
+            deer_points.append(Point(center_x, center_y))
+
+    if not deer_points:
+        return None
+
+    # 3. Create a GeoDataFrame from points
+    gdf = gpd.GeoDataFrame(geometry=deer_points, crs="EPSG:4326" if geotiff_path else None)
+    gdf['timestamp'] = pd.to_datetime(pd.Timestamp.now()) # Mock timestamp
+
+    # 4. Cluster points to form trackways (simplified)
+    # A more robust implementation would use time-based clustering
+    coords = np.array([[p.x, p.y] for p in gdf.geometry])
+    db = DBSCAN(eps=0.1, min_samples=3).fit(coords) # eps needs tuning based on CRS
+    gdf['cluster'] = db.labels_
+
+    trackway_gdf = gdf[gdf['cluster'] != -1]
+    if trackway_gdf.empty:
+        return None
+
+    # 5. Convert clusters to LineStrings
+    trackways = []
+    for cluster_id, cluster_gdf in trackway_gdf.groupby('cluster'):
+        if len(cluster_gdf) > 1:
+            line = LineString(cluster_gdf.geometry.tolist())
+            trackways.append({
+                "type": "Feature",
+                "geometry": line.__geo_interface__,
+                "properties": {
+                    "trackway_id": int(cluster_id),
+                    "length": line.length,
+                }
+            })
+
+    # 6. Get habitat info
+    habitat_info = await classify_habitat(file, geotiff_path)
+
+    return {
+        "trackways": {
+            "type": "FeatureCollection",
+            "features": trackways
+        },
+        "habitat_info": habitat_info
+    }
+
+
 def extract_linear_features(image_path: str):
     """
     Extracts linear features from an image using Hough Line Transform.

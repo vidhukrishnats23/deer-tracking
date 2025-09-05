@@ -79,3 +79,12 @@ def extract_detailed_metadata(file: UploadFile):
         return {"error": f"Could not extract detailed metadata: {e}"}
     finally:
         os.remove(tmp_path)
+
+def pixel_to_geo(pixel_x, pixel_y, geotiff_path):
+    """
+    Convert a single pixel coordinate (x, y) to a geographic coordinate.
+    """
+    with rasterio.open(geotiff_path) as src:
+        # The transform method maps pixel coordinates to geographic coordinates
+        geo_x, geo_y = src.transform * (pixel_x, pixel_y)
+        return geo_x, geo_y
