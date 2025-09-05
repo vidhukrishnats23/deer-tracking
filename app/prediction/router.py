@@ -4,6 +4,7 @@ from PIL import Image
 import io
 from . import services
 from pydantic import BaseModel
+from app.logger import logger
 
 router = APIRouter()
 
@@ -31,20 +32,23 @@ async def predict_image(
     results = []
     for file in files:
         try:
+            logger.info(f"Processing file: {file.filename}")
             image = Image.open(io.BytesIO(await file.read()))
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid image file")
+            prediction = services.predict(image, file.filename, save=generate_annotated_image)
 
-        prediction = services.predict(image, file.filename, save=generate_annotated_image)
+            # Extract bounding boxes, scores, and labels
+            bboxes = []
+            for box in prediction[0].boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                score = box.conf[0].item()
+                label = prediction[0].names[int(box.cls[0].item())]
+                bboxes.append(BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2, score=score, label=label))
 
-        # Extract bounding boxes, scores, and labels
-        bboxes = []
-        for box in prediction[0].boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            score = box.conf[0].item()
-            label = prediction[0].names[int(box.cls[0].item())]
-            bboxes.append(BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2, score=score, label=label))
+            results.append(PredictionResult(filename=file.filename, predictions=bboxes))
+            logger.info(f"Successfully processed file: {file.filename}")
 
-        results.append(PredictionResult(filename=file.filename, predictions=bboxes))
+        except Exception as e:
+            logger.error(f"Error processing file {file.filename}: {e}")
+            raise HTTPException(status_code=500, detail=f"Error processing file {file.filename}")
 
     return results

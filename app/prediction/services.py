@@ -5,6 +5,7 @@ import os
 import glob
 import json
 from datetime import datetime
+from app.logger import logger
 
 def get_latest_model_path():
     """
@@ -18,10 +19,12 @@ def get_latest_model_path():
             latest_run = max(list_of_runs, key=os.path.getctime)
             weights_path = os.path.join(latest_run, 'weights', 'best.pt')
             if os.path.exists(weights_path):
+                logger.info(f"Found trained model at {weights_path}")
                 return weights_path
 
     # If no trained model is found, check if the base model exists
     if os.path.exists(settings.yolo_model_path):
+        logger.info(f"Using base model at {settings.yolo_model_path}")
         return settings.yolo_model_path
     else:
         raise FileNotFoundError(
@@ -50,29 +53,38 @@ def predict(image: Image.Image, filename: str, save: bool = False):
     Run prediction on a single image.
     Optionally save the annotated image and prediction data.
     """
+    logger.info(f"Running prediction on {filename}")
     results = model(image)
+    logger.info(f"Prediction complete for {filename}")
 
     if save:
-        # Create a unique directory for each prediction
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        prediction_dir = os.path.join("predictions", f"{filename}_{timestamp}")
-        os.makedirs(prediction_dir, exist_ok=True)
+        try:
+            # Create a unique directory for each prediction
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            prediction_dir = os.path.join("predictions", f"{filename}_{timestamp}")
+            os.makedirs(prediction_dir, exist_ok=True)
+            logger.info(f"Saving prediction results to {prediction_dir}")
 
-        # Save annotated image
-        annotated_image = _draw_bounding_boxes(image.copy(), results)
-        annotated_image_path = os.path.join(prediction_dir, f"annotated_{filename}")
-        annotated_image.save(annotated_image_path)
+            # Save annotated image
+            annotated_image = _draw_bounding_boxes(image.copy(), results)
+            annotated_image_path = os.path.join(prediction_dir, f"annotated_{filename}")
+            annotated_image.save(annotated_image_path)
 
-        # Save prediction data
-        prediction_data = []
-        for box in results[0].boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            score = box.conf[0].item()
-            label = model.names[int(box.cls[0].item())]
-            prediction_data.append({"box": [x1, y1, x2, y2], "score": score, "label": label})
+            # Save prediction data
+            prediction_data = []
+            for box in results[0].boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                score = box.conf[0].item()
+                label = model.names[int(box.cls[0].item())]
+                prediction_data.append({"box": [x1, y1, x2, y2], "score": score, "label": label})
 
-        json_path = os.path.join(prediction_dir, "predictions.json")
-        with open(json_path, "w") as f:
-            json.dump(prediction_data, f, indent=4)
+            json_path = os.path.join(prediction_dir, "predictions.json")
+            with open(json_path, "w") as f:
+                json.dump(prediction_data, f, indent=4)
+            logger.info(f"Successfully saved prediction results for {filename}")
+        except Exception as e:
+            logger.error(f"Error saving prediction results for {filename}: {e}")
+            # We don't re-raise the exception here because the prediction itself was successful.
+            # The client has the prediction results, even if saving failed.
 
     return results

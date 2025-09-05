@@ -5,6 +5,8 @@ from app.config import settings
 from app.ingestion.router import router as ingestion_router
 from app.annotation.router import router as annotation_router
 from app.prediction.router import router as prediction_router
+from app.logger import logger
+from app.prediction.services import get_latest_model_path
 
 app = FastAPI()
 
@@ -13,8 +15,17 @@ app = FastAPI()
 def startup_event():
     """
     Startup event handler.
-    Creates required directories and default data configuration file.
+    Creates required directories, default data configuration file,
+    and checks for model availability.
     """
+    # Check for model availability
+    try:
+        model_path = get_latest_model_path()
+        logger.info(f"Using model: {model_path}")
+    except FileNotFoundError as e:
+        logger.critical(str(e))
+        raise e
+
     # Create required directories
     required_dirs = [
         settings.upload_dir,
