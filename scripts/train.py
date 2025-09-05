@@ -3,6 +3,7 @@ import sys
 import base64
 import time
 import pandas as pd
+import argparse
 from ultralytics import YOLO
 from pathlib import Path
 
@@ -78,23 +79,39 @@ def generate_html_report(results, run_name):
     print(f"HTML report generated at {report_path}")
 
 
-def train():
+def train(mode):
     """
     Train the YOLO model with the settings specified in the config file.
     """
     # Generate a unique run name based on timestamp
     run_name = time.strftime("%Y%m%d-%H%M%S")
 
+    if mode == "classification":
+        model_name = settings.habitat_model
+        data_config = settings.habitat_data_config
+        epochs = settings.habitat_epochs
+        batch_size = settings.habitat_batch_size
+        img_size = settings.habitat_img_size
+        project_name = settings.habitat_project_name
+    else: # detection
+        model_name = settings.yolo_model
+        data_config = settings.data_config
+        epochs = settings.epochs
+        batch_size = settings.batch_size
+        img_size = settings.img_size
+        project_name = settings.project_name
+
+
     # Load the YOLO model
-    model = YOLO(settings.yolo_model)
+    model = YOLO(model_name)
 
     # Train the model
     results = model.train(
-        data=settings.data_config,
-        epochs=settings.epochs,
-        batch=settings.batch_size,
-        imgsz=settings.img_size,
-        project=settings.project_name,
+        data=data_config,
+        epochs=epochs,
+        batch=batch_size,
+        imgsz=img_size,
+        project=project_name,
         name=run_name,
         plots=True  # Enable plot generation
     )
@@ -107,4 +124,8 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description="Train a YOLO model.")
+    parser.add_argument("--mode", type=str, default="detection", choices=["detection", "classification"],
+                        help="Training mode: 'detection' or 'classification'")
+    args = parser.parse_args()
+    train(args.mode)

@@ -7,8 +7,16 @@ from fastapi import UploadFile
 from app.processing.transformations import process_image
 from app.geospatial.services import reproject_image
 from app.logger import logger
+from typing import Optional
 
-def save_file(file: UploadFile, spatial_metadata: dict = None):
+def log_metadata(metadata: dict):
+    """
+    Log metadata about the ingested image to a file.
+    """
+    with open(settings.metadata_log_file, "a") as f:
+        f.write(json.dumps(metadata) + "\n")
+
+async def save_file(file: UploadFile, spatial_metadata: dict = None, season: Optional[str] = None):
     """
     Save the uploaded file with a unique filename and process it.
     """
@@ -28,7 +36,7 @@ def save_file(file: UploadFile, spatial_metadata: dict = None):
 
         # Save the file to a temporary location
         with open(temp_file_path, "wb") as buffer:
-            buffer.write(file.file.read())
+            buffer.write(await file.read())
 
         # Atomically move the file to its final destination
         os.rename(temp_file_path, final_file_path)
@@ -51,9 +59,11 @@ def save_file(file: UploadFile, spatial_metadata: dict = None):
 
         # Get image resolution
         from . import validation
-        resolution = validation.validate_resolution(file)
-        if isinstance(resolution, str): # An error occurred
-            width, height = -1, -1
+        file.file.seek(0) # Reset file pointer before reading again
+        resolution_error = validation.validate_resolution(file)
+        if resolution_error:
+             logger.warning(f"Could not validate resolution for {file.filename}: {resolution_error}")
+             width, height = -1, -1
         else:
             file.file.seek(0)
             if file.content_type == "image/tiff":
@@ -82,6 +92,11 @@ def save_file(file: UploadFile, spatial_metadata: dict = None):
             },
             "spatial_metadata": spatial_metadata
         }
+        if season:
+            metadata['season'] = season
+
+        log_metadata(metadata)
+
         logger.info(f"Generated metadata for {file.filename}: {metadata}")
         return metadata
     except Exception as e:

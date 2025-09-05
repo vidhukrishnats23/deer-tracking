@@ -1,5 +1,103 @@
 import geopandas as gpd
 from app.logger import logger
+import rasterio
+from typing import Optional
+import numpy as np
+
+def get_habitat_type_for_coord(x: float, y: float, habitat_map_path: str) -> Optional[int]:
+    """
+    Get the habitat type for a given coordinate from a classified habitat map.
+
+    Args:
+        x (float): The x-coordinate.
+        y (float): The y-coordinate.
+        habitat_map_path (str): The path to the classified habitat GeoTIFF.
+
+    Returns:
+        Optional[int]: The habitat type (pixel value) or None if the coordinate is out of bounds.
+    """
+    try:
+        with rasterio.open(habitat_map_path) as src:
+            # Get the pixel coordinates from the world coordinates
+            row, col = src.index(x, y)
+
+            # Read the value of the pixel
+            # Assuming the habitat type is in the first band
+            value = src.read(1, window=((row, row + 1), (col, col + 1)))
+
+            return int(value[0, 0])
+    except IndexError:
+        # Coordinate is outside the raster bounds
+        return None
+    except Exception as e:
+        logger.error(f"Error getting habitat type for coordinate ({x}, {y}): {e}")
+        return None
+
+def get_habitat_areas(habitat_map_path: str) -> dict:
+    """
+    Calculate the area of each habitat class in a GeoTIFF.
+
+    Args:
+        habitat_map_path (str): The path to the classified habitat GeoTIFF.
+
+    Returns:
+        dict: A dictionary where keys are habitat classes and values are their areas in square meters.
+    """
+    try:
+        with rasterio.open(habitat_map_path) as src:
+            # Read the raster data
+            data = src.read(1)
+            # Get the pixel size
+            pixel_size_x, pixel_size_y = src.res
+            # Calculate the area of a single pixel
+            pixel_area = pixel_size_x * pixel_size_y
+
+            # Get the unique habitat classes and their counts
+            unique, counts = np.unique(data, return_counts=True)
+            # Calculate the area for each class
+            areas = counts * pixel_area
+
+            return dict(zip(unique, areas))
+    except Exception as e:
+        logger.error(f"Error calculating habitat areas: {e}")
+        return {}
+
+def get_average_degradation_for_habitats(habitat_map_path: str, degradation_map_path: str) -> dict:
+    """
+    Calculates the average degradation for each habitat type.
+
+    Args:
+        habitat_map_path (str): The path to the habitat map GeoTIFF.
+        degradation_map_path (str): The path to the degradation map GeoTIFF.
+
+    Returns:
+        dict: A dictionary where keys are habitat types and values are the average degradation.
+    """
+    try:
+        with rasterio.open(habitat_map_path) as habitat_src, rasterio.open(degradation_map_path) as degradation_src:
+            habitat_data = habitat_src.read(1)
+            degradation_data = degradation_src.read(1)
+
+            # Ensure the maps have the same shape
+            if habitat_data.shape != degradation_data.shape:
+                raise ValueError("Habitat and degradation maps must have the same dimensions.")
+
+            unique_habitats = np.unique(habitat_data)
+            avg_degradation = {}
+
+            for habitat_type in unique_habitats:
+                # Find where the habitat type is present
+                mask = habitat_data == habitat_type
+                # Get the degradation values for that habitat
+                degradation_in_habitat = degradation_data[mask]
+                # Calculate the average degradation and convert to python types
+                avg_degradation[int(habitat_type)] = float(np.mean(degradation_in_habitat))
+
+            return avg_degradation
+
+    except Exception as e:
+        logger.error(f"Error calculating average degradation: {e}")
+        return {}
 
 def import_gis_data(filepath: str):
     """
