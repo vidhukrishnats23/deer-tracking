@@ -6,6 +6,8 @@ import glob
 import json
 from datetime import datetime
 from app.logger import logger
+import pandas as pd
+
 
 def get_latest_model_path():
     """
@@ -48,6 +50,42 @@ def _draw_bounding_boxes(image: Image.Image, predictions, model):
         draw.text((x1, y1), f"{label} ({confidence:.2f})", fill="red")
     return image
 
+
+def _save_detection_points(filename: str, predictions, model):
+    """
+    Save detection points to a CSV file.
+    """
+    detections_dir = "detections"
+    os.makedirs(detections_dir, exist_ok=True)
+    detections_file = os.path.join(detections_dir, "detections.csv")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    new_rows = []
+    for box in predictions[0].boxes:
+        x1, y1, x2, y2 = box.xyxy[0].tolist()
+        x_center = (x1 + x2) / 2
+        y_center = (y1 + y2) / 2
+        score = box.conf[0].item()
+        label = model.names[int(box.cls[0].item())]
+        if label == 'deer':
+            new_rows.append([timestamp, filename, x_center, y_center, score, label])
+
+    if not new_rows:
+        return
+
+    df = pd.DataFrame(new_rows, columns=["timestamp", "filename", "x_center", "y_center", "score", "label"])
+
+    try:
+        if not os.path.exists(detections_file):
+            df.to_csv(detections_file, index=False)
+        else:
+            df.to_csv(detections_file, mode='a', header=False, index=False)
+        logger.info(f"Saved {len(new_rows)} detection points to {detections_file}")
+    except Exception as e:
+        logger.error(f"Error saving detection points to {detections_file}: {e}")
+
+
 def predict(image: Image.Image, filename: str, save: bool = False):
     """
     Run prediction on a single image.
@@ -64,6 +102,9 @@ def predict(image: Image.Image, filename: str, save: bool = False):
 
     results = model(image)
     logger.info(f"Prediction complete for {filename}")
+
+    # Save deer detection points for trackway analysis
+    _save_detection_points(filename, results, model)
 
     if save:
         try:
