@@ -34,8 +34,17 @@ def get_latest_model_path():
             "Please ensure the model is available or run the training pipeline."
         )
 
-# model_path = get_latest_model_path() # Defer model loading
-# model = YOLO(model_path)
+model = None
+
+def get_model():
+    """
+    Load the YOLO model.
+    """
+    global model
+    if model is None:
+        model_path = get_latest_model_path()
+        model = YOLO(model_path)
+    return model
 
 def _draw_bounding_boxes(image: Image.Image, predictions, model):
     """
@@ -91,17 +100,8 @@ def predict(image: Image.Image, filename: str, save: bool = False):
     Run prediction on a single image.
     Optionally save the annotated image and prediction data.
     """
-    logger.info(f"Running prediction on {filename}")
-
-    try:
-        model_path = get_latest_model_path()
-        model = YOLO(model_path)
-    except FileNotFoundError as e:
-        logger.error(f"Could not load model for prediction: {e}")
-        raise e
-
+    model = get_model()
     results = model(image)
-    logger.info(f"Prediction complete for {filename}")
 
     # Save deer detection points for trackway analysis
     _save_detection_points(filename, results, model)
@@ -137,3 +137,14 @@ def predict(image: Image.Image, filename: str, save: bool = False):
             # The client has the prediction results, even if saving failed.
 
     return results
+
+from fastapi import UploadFile
+import io
+
+async def predict_stream(image_bytes: io.BytesIO, filename: str, save: bool = False):
+    """
+    Run prediction on a single image from a BytesIO object.
+    This is designed for use with streaming responses.
+    """
+    image = Image.open(image_bytes)
+    return predict(image, filename, save)

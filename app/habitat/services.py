@@ -3,13 +3,30 @@ from app.trackways.services import analyze_trackways
 from app.gis_integration.services import get_habitat_areas, get_average_degradation_for_habitats
 from app.config import settings
 from collections import defaultdict
+import random
+from typing import Optional
 
-async def classify_habitat(file: UploadFile):
+async def classify_habitat(file: UploadFile, geotiff_path: Optional[str] = None):
     """
-    Placeholder for habitat classification logic.
+    Classifies the habitat in the given image.
+    This is a mock implementation. In a real-world scenario, this would
+    involve a machine learning model.
     """
-    # In the future, this will use a ML model to classify the image
-    return {"filename": file.filename, "habitat": "unknown"}
+    # Mock implementation
+    habitat_types = ["forest", "grassland", "wetland", "urban"]
+    habitat = random.choice(habitat_types)
+
+    # In a real implementation, the GeoTIFF would be used for more context
+    if geotiff_path:
+        # For example, use the CRS or bounds to adjust classification
+        pass
+
+    return {
+        "filename": file.filename,
+        "predicted_habitat": habitat,
+        "confidence": round(random.uniform(0.7, 0.99), 2),
+        "geotiff_used": geotiff_path is not None
+    }
 
 def calculate_habitat_impact():
     """

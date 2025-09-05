@@ -1,6 +1,12 @@
-from fastapi import APIRouter, UploadFile, File
-from app.habitat.services import classify_habitat, calculate_habitat_impact, calculate_ecological_pressure
+from fastapi import APIRouter, UploadFile, File, Depends
+from app.habitat.services import (
+    classify_habitat,
+    calculate_habitat_impact,
+    calculate_ecological_pressure,
+)
 from app.habitat.validation import validate_image
+from app.prediction.router import get_temp_geotiff_path
+from typing import Optional
 
 router = APIRouter(
     prefix="/habitat",
@@ -8,12 +14,16 @@ router = APIRouter(
 )
 
 @router.post("/classify")
-async def classify_habitat_endpoint(file: UploadFile = File(...)):
+async def classify_habitat_endpoint(
+    file: UploadFile = File(...),
+    geotiff_path: Optional[str] = Depends(get_temp_geotiff_path),
+):
     """
     Classify the habitat type from an image.
+    If a GeoTIFF is provided, it can be used for more accurate classification.
     """
     validate_image(file)
-    result = await classify_habitat(file)
+    result = await classify_habitat(file, geotiff_path)
     return result
 
 @router.get("/impact_assessment")

@@ -1,0 +1,6 @@
+timestamp,filename,x_center,y_center,score,label
+2025-09-05 18:32:08,test.jpg,30.0,30.0,0.9,deer
+2025-09-05 18:33:14,test.jpg,30.0,30.0,0.9,deer
+2025-09-05 18:33:57,test.jpg,30.0,30.0,0.9,deer
+2025-09-05 18:35:09,test.jpg,30.0,30.0,0.9,deer
+2025-09-05 18:35:09,test.jpg,30.0,30.0,0.9,deer

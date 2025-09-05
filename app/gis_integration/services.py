@@ -260,6 +260,46 @@ import folium
 import rasterio
 from rasterio.transform import from_bounds
 import numpy as np
+from fastapi import UploadFile, HTTPException
+import os
+
+async def compare_manual_vs_ai(manual_gis_file: UploadFile, start_date: Optional[str], end_date: Optional[str]):
+    """
+    Service to compare AI-detected trackways with manual GIS data.
+    """
+    temp_dir = "temp_gis"
+    os.makedirs(temp_dir, exist_ok=True)
+    manual_gis_path = os.path.join(temp_dir, manual_gis_file.filename)
+
+    try:
+        from app.trackways.services import analyze_trackways
+        with open(manual_gis_path, "wb") as buffer:
+            buffer.write(await manual_gis_file.read())
+
+        # 1. Get AI trackways
+        ai_trackways = analyze_trackways(start_date, end_date)
+        if not ai_trackways:
+            raise HTTPException(status_code=404, detail="No AI trackways found for the given dates.")
+
+        # 2. Convert AI trackways to GeoDataFrame
+        geometries = [LineString([(p['x'], p['y']) for p in data['points']]) for data in ai_trackways.values() if len(data['points']) >= 2]
+        ai_gdf = gpd.GeoDataFrame(geometry=geometries, crs="EPSG:4326")
+        ai_gdf['trackway_id'] = list(ai_trackways.keys())
+
+        # 3. Import manual GIS data
+        manual_gdf = import_gis_data(manual_gis_path)
+
+        # 4. Calculate similarity
+        metrics = calculate_similarity(ai_gdf, manual_gdf)
+        return metrics
+
+    except Exception as e:
+        logger.error(f"Error during comparison: {e}")
+        raise HTTPException(status_code=500, detail=f"Error during comparison: {str(e)}")
+    finally:
+        if os.path.exists(manual_gis_path):
+            os.remove(manual_gis_path)
+
 
 def visualize_comparison(ai_trackways_gdf: gpd.GeoDataFrame, manual_trackways_gdf: gpd.GeoDataFrame, imagery_path: str = None, output_path: str = "comparison_map.html"):
     """
@@ -319,6 +359,43 @@ def visualize_comparison(ai_trackways_gdf: gpd.GeoDataFrame, manual_trackways_gd
         raise e
 
 import time
+from fastapi.responses import FileResponse
+
+async def export_gis(format: str, start_date: Optional[str], end_date: Optional[str]):
+    """
+    Service to export AI-detected trackways to a GIS format.
+    """
+    try:
+        from app.trackways.services import analyze_trackways
+        # Get AI trackways
+        ai_trackways = analyze_trackways(start_date, end_date)
+        if not ai_trackways:
+            raise HTTPException(status_code=404, detail="No AI trackways found for the given dates.")
+
+        output_dir = "output"
+        os.makedirs(output_dir, exist_ok=True)
+        filename = f"ai_trackways_{int(time.time())}"
+
+        ext = ""
+        if format.lower() == 'shapefile':
+            ext = ".shp"
+        elif format.lower() == 'geojson':
+            ext = ".geojson"
+        elif format.lower() == 'kml':
+            ext = ".kml"
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported format")
+
+        output_path = os.path.join(output_dir, filename + ext)
+
+        export_trackways(ai_trackways, format, output_path)
+
+        return FileResponse(output_path, media_type='application/octet-stream', filename=filename+ext)
+
+    except Exception as e:
+        logger.error(f"Error during export: {e}")
+        raise HTTPException(status_code=500, detail=f"Error during export: {str(e)}")
+
 
 def generate_report(comparison_metrics: dict, ai_processing_time: float, manual_processing_time: float, output_path: str = "report.txt"):
     """
