@@ -1,9 +1,16 @@
-.PHONY: train
+.PHONY: train train-detection train-habitat install cleanup
 
-train:
-	@echo "Starting YOLO training..."
-	python scripts/train.py
-	@echo "Training pipeline finished."
+train: train-detection
+
+train-detection:
+	@echo "Starting YOLO detection training..."
+	python scripts/train.py --mode detection
+	@echo "Detection training pipeline finished."
+
+train-habitat:
+	@echo "Starting YOLO habitat classification training..."
+	python scripts/train.py --mode classification
+	@echo "Habitat classification training pipeline finished."
 
 install:
 	pip install -r requirements.txt

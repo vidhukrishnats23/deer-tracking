@@ -6,6 +6,10 @@ from app.trackways.validation import is_biologically_plausible
 from typing import Optional
 import cv2
 import numpy as np
+from app.gis_integration.services import get_habitat_type_for_coord
+from app.config import settings
+
+detections_file = "detections/detections.csv"
 
 def _calc_displacement(trj):
     return np.sqrt(np.power(trj.x.shift(1) - trj.x, 2) + np.power(trj.y.shift(1) - trj.y, 2))
@@ -15,7 +19,6 @@ def analyze_trackways(start_date: Optional[str] = None, end_date: Optional[str] 
     Analyzes deer trackways from detection data.
     Optionally, filter by a time window.
     """
-    detections_file = "detections/detections.csv"
     if not os.path.exists(detections_file):
         logger.warning("Detections file not found. No trackways to analyze.")
         return None
@@ -77,10 +80,17 @@ def analyze_trackways(start_date: Optional[str] = None, end_date: Optional[str] 
         if not is_biologically_plausible(path_length, path_speed, cluster_points):
             continue
 
+        # Get habitat type for the trackway's centroid
+        centroid_x = cluster_points['x'].mean()
+        centroid_y = cluster_points['y'].mean()
+        habitat_type = get_habitat_type_for_coord(centroid_x, centroid_y, settings.habitat_map_path)
+
+
         results[int(cluster_id)] = {
             "length": path_length,
             "average_speed": path_speed.mean() if not path_speed.empty else 0,
-            "points": cluster_points.to_dict('records')
+            "points": cluster_points.to_dict('records'),
+            "habitat_type": habitat_type,
         }
 
     logger.info(f"Analyzed {len(results)} potential trackways after validation.")

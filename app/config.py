@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     run_name: str = "exp"
     data_config: str = "data/data.yaml"
 
+    # Habitat Classification settings
+    habitat_map_path: str = "data/gis/habitat_map.tif"
+    degradation_map_path: str = "data/gis/degradation_map.tif"
+    habitat_model: str = "yolov8n-cls.pt"
+    habitat_model_path: str = "yolov8n-cls.pt"
+    habitat_epochs: int = 50
+    habitat_batch_size: int = 32
+    habitat_img_size: int = 224
+    habitat_project_name: str = "habitat_training"
+    habitat_run_name: str = "habitat_exp"
+    habitat_data_config: str = "data/habitat_data.yaml"
+
     class Config:
         env_file = ".env"
 
