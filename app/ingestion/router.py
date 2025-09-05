@@ -1,5 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from typing import Optional
+from typing import Optional, List
 from . import validation
 from . import services
 from app.logger import logger
@@ -7,20 +7,24 @@ from app.logger import logger
 router = APIRouter()
 
 @router.post("/ingest")
-async def ingest_data(file: UploadFile = File(...), season: Optional[str] = Form(None)):
+async def ingest_data(
+    file: UploadFile = File(...),
+    season: Optional[str] = Form(None),
+    processing_pipeline: Optional[List[str]] = Form(None)
+):
     """
     Ingest a new image file.
     The file will be validated and saved to the raw data directory.
-    Optionally, specify the season for the image.
+    Optionally, specify the season and a processing pipeline.
     """
     try:
         logger.info(f"Ingesting file: {file.filename}")
-        error, spatial_metadata = validation.validate_file(file)
+        error, detailed_metadata = validation.validate_file(file)
         if error:
             logger.warning(f"Validation error for file {file.filename}: {error}")
             raise HTTPException(status_code=400, detail=error)
 
-        metadata = await services.save_file(file, spatial_metadata, season)
+        metadata = await services.save_file(file, detailed_metadata, season, processing_pipeline)
         logger.info(f"Successfully ingested file: {file.filename}")
         return {"message": "Data ingested successfully", "metadata": metadata}
     except HTTPException as e:

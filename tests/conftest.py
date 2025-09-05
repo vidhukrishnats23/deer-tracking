@@ -28,13 +28,33 @@ def override_settings():
 
 import pytest
 
+import numpy as np
+from PIL import ImageFilter
+
 @pytest.fixture
 def create_dummy_image():
-    def _create_dummy_image(file_format: str, width: int, height: int) -> bytes:
+    def _create_dummy_image(
+        file_format: str,
+        width: int,
+        height: int,
+        blur: bool = False,
+        overexposed: bool = False,
+    ) -> bytes:
         """
         Create a dummy image for testing.
         """
-        image = Image.new("RGB", (width, height))
+        if overexposed:
+            # Create a white image for overexposure test
+            array = np.full((height, width, 3), 255, dtype=np.uint8)
+            image = Image.fromarray(array, 'RGB')
+        else:
+            # Create a random noise image for other tests
+            array = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
+            image = Image.fromarray(array, 'RGB')
+
+        if blur:
+            image = image.filter(ImageFilter.GaussianBlur(radius=5))
+
         buffer = io.BytesIO()
         image.save(buffer, format=file_format)
         return buffer.getvalue()

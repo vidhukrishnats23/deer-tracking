@@ -8,6 +8,7 @@ from app.prediction.router import router as prediction_router
 from app.trackways.router import router as trackways_router
 from app.gis_integration.router import router as gis_integration_router
 from app.habitat.router import router as habitat_router
+from app.mosaicking.router import router as mosaicking_router
 from app.logger import logger
 from app.prediction.services import get_latest_model_path
 
@@ -61,6 +62,7 @@ app.include_router(prediction_router, prefix="/api/v1")
 app.include_router(trackways_router, prefix="/api/v1")
 app.include_router(gis_integration_router, prefix="/api/v1")
 app.include_router(habitat_router, prefix="/api/v1")
+app.include_router(mosaicking_router, prefix="/api/v1")
 
 
 @app.get("/")
