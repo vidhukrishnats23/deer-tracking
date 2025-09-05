@@ -7,12 +7,19 @@ class Settings(BaseSettings):
 
     # Ingestion settings
     allowed_mime_types: List[str] = ["image/jpeg", "image/png", "image/tiff"]
-    max_file_size: int = 10 * 1024 * 1024  # 10 MB
-    max_resolution: Tuple[int, int] = (4096, 4096)
+    max_file_size: int = 100 * 1024 * 1024  # 100 MB
+    max_resolution: Tuple[int, int] = (10000, 10000)
     upload_dir: str = "data/raw"
     processed_dir: str = "data/processed"
     labels_dir: str = "data/labels"
     metadata_log_file: str = "data/metadata.log"
+
+    # Quality assessment settings
+    blur_threshold: float = 100.0
+    underexposure_threshold: float = 0.1
+    overexposure_threshold: float = 0.1
+    sensor_width_mm: float = 23.5  # Example for a crop-sensor camera
+    max_gsd: float = 0.5  # meters/pixel
 
     # Retention policies
     processed_images_retention_days: int = 30
@@ -28,6 +35,8 @@ class Settings(BaseSettings):
     TARGET_CRS: str = "EPSG:4326"  # Default to WGS84
     DEFAULT_CRS: str = "EPSG:3857" # Default to Web Mercator
     GIS_DATA_PATH: str = "data/gis"
+    DEM_PATH: str = "data/gis/dem.tif"  # Path to the Digital Elevation Model
+    APPLY_ORTHO_ON_INGEST: bool = False  # Whether to apply orthorectification on ingest
 
     # YOLO Training settings
     yolo_model: str = "yolov8n.pt"

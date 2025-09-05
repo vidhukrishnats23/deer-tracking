@@ -108,3 +108,29 @@ def test_ingest_and_process_success(create_dummy_image):
     # Verify the processed image
     processed_image = Image.open(processed_path)
     assert processed_image.size == settings.normalized_size
+
+
+def test_ingest_blurry_image(create_dummy_image):
+    """
+    Test ingestion of a blurry image.
+    """
+    image_bytes = create_dummy_image("jpeg", 100, 100, blur=True)
+    response = client.post(
+        "/api/v1/ingest",
+        files={"file": ("blurry.jpg", image_bytes, "image/jpeg")},
+    )
+    assert response.status_code == 400
+    assert "Image is likely blurry" in response.json()["detail"]
+
+
+def test_ingest_overexposed_image(create_dummy_image):
+    """
+    Test ingestion of an overexposed image.
+    """
+    image_bytes = create_dummy_image("jpeg", 100, 100, overexposed=True)
+    response = client.post(
+        "/api/v1/ingest",
+        files={"file": ("overexposed.jpg", image_bytes, "image/jpeg")},
+    )
+    assert response.status_code == 400
+    assert "Image is likely overexposed" in response.json()["detail"]
