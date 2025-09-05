@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     augmentation_flip: bool = True
     normalized_size: Tuple[int, int] = (1024, 1024)
 
+    # Geospatial settings
+    TARGET_CRS: str = "EPSG:4326"  # Default to WGS84
+    DEFAULT_CRS: str = "EPSG:3857" # Default to Web Mercator
+    GIS_DATA_PATH: str = "data/gis"
+
     # YOLO Training settings
     yolo_model: str = "yolov8n.pt"
     yolo_model_path: str = "yolov8n.pt"
