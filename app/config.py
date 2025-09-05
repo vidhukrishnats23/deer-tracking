@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     labels_dir: str = "data/labels"
     metadata_log_file: str = "data/metadata.log"
 
+    # Retention policies
+    processed_images_retention_days: int = 30
+    training_artifacts_retention_days: int = 90
+
     # Augmentation settings
     augmentation_rotation_angle: int = 15
     augmentation_scale_factor: float = 0.9

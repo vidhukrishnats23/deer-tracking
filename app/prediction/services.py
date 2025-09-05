@@ -32,10 +32,10 @@ def get_latest_model_path():
             "Please ensure the model is available or run the training pipeline."
         )
 
-model_path = get_latest_model_path()
-model = YOLO(model_path)
+# model_path = get_latest_model_path() # Defer model loading
+# model = YOLO(model_path)
 
-def _draw_bounding_boxes(image: Image.Image, predictions):
+def _draw_bounding_boxes(image: Image.Image, predictions, model):
     """
     Draw bounding boxes on an image.
     """
@@ -54,6 +54,14 @@ def predict(image: Image.Image, filename: str, save: bool = False):
     Optionally save the annotated image and prediction data.
     """
     logger.info(f"Running prediction on {filename}")
+
+    try:
+        model_path = get_latest_model_path()
+        model = YOLO(model_path)
+    except FileNotFoundError as e:
+        logger.error(f"Could not load model for prediction: {e}")
+        raise e
+
     results = model(image)
     logger.info(f"Prediction complete for {filename}")
 
@@ -66,7 +74,7 @@ def predict(image: Image.Image, filename: str, save: bool = False):
             logger.info(f"Saving prediction results to {prediction_dir}")
 
             # Save annotated image
-            annotated_image = _draw_bounding_boxes(image.copy(), results)
+            annotated_image = _draw_bounding_boxes(image.copy(), results, model)
             annotated_image_path = os.path.join(prediction_dir, f"annotated_{filename}")
             annotated_image.save(annotated_image_path)
 

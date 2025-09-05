@@ -4,9 +4,44 @@ from app.main import app
 from PIL import Image
 import io
 import os
+from app.config import settings
+
+
+class MockTensor:
+    def __init__(self, data):
+        self.data = data
+    def tolist(self):
+        return self.data
+    def item(self):
+        return self.data
+
+class MockBox:
+    def __init__(self, xyxy, cls, conf):
+        self.xyxy = [MockTensor(xyxy)]
+        self.cls = [MockTensor(cls)]
+        self.conf = [MockTensor(conf)]
+
+    @property
+    def item(self):
+        return self.conf[0]
+
+class MockResult:
+    def __init__(self, model):
+        self.boxes = [MockBox([10, 10, 50, 50], 0, 0.9)]
+        self.names = model.names
+
+class MockYOLO:
+    def __init__(self, model_path):
+        self.model_path = model_path
+        self.names = {0: 'deer'}
+
+    def __call__(self, image):
+        return [MockResult(self)]
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr("app.prediction.services.YOLO", MockYOLO)
+    monkeypatch.setattr("app.prediction.services.get_latest_model_path", lambda: "dummy_model.pt")
     return TestClient(app)
 
 def create_dummy_image(filename="test.jpg"):

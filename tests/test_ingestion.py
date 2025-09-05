@@ -8,16 +8,7 @@ from app.config import settings
 
 client = TestClient(app)
 
-def create_dummy_image(file_format: str, width: int, height: int) -> bytes:
-    """
-    Create a dummy image for testing.
-    """
-    image = Image.new("RGB", (width, height))
-    buffer = io.BytesIO()
-    image.save(buffer, format=file_format)
-    return buffer.getvalue()
-
-def test_ingest_jpg_success():
+def test_ingest_jpg_success(create_dummy_image):
     """
     Test successful ingestion of a JPG file.
     """
@@ -33,7 +24,7 @@ def test_ingest_jpg_success():
     assert os.path.exists(metadata["file_path"])
 
 
-def test_ingest_png_success():
+def test_ingest_png_success(create_dummy_image):
     """
     Test successful ingestion of a PNG file.
     """
@@ -45,7 +36,7 @@ def test_ingest_png_success():
     assert response.status_code == 200
     assert response.json()["message"] == "Data ingested successfully"
 
-def test_ingest_tiff_success():
+def test_ingest_tiff_success(create_dummy_image):
     """
     Test successful ingestion of a TIFF file.
     """
@@ -68,7 +59,7 @@ def test_ingest_invalid_format():
     assert response.status_code == 400
     assert "Invalid file format" in response.json()["detail"]
 
-def test_ingest_file_too_large():
+def test_ingest_file_too_large(create_dummy_image):
     """
     Test ingestion of a file that is too large.
     """
@@ -83,7 +74,7 @@ def test_ingest_file_too_large():
     settings.max_file_size = 10 * 1024 * 1024 # reset to default
 
 
-def test_ingest_resolution_too_high():
+def test_ingest_resolution_too_high(create_dummy_image):
     """
     Test ingestion of an image with a resolution that is too high.
     """
@@ -97,7 +88,7 @@ def test_ingest_resolution_too_high():
     assert "exceeds the limit of 10x10 pixels" in response.json()["detail"]
     settings.max_resolution = (4096, 4096) # reset to default
 
-def test_ingest_and_process_success():
+def test_ingest_and_process_success(create_dummy_image):
     """
     Test successful ingestion and processing of an image.
     """
