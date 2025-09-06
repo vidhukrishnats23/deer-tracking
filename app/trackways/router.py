@@ -56,16 +56,10 @@ async def extract_features_endpoint(file: UploadFile = File(...)):
     """
     Extract linear features from an uploaded image.
     """
-    temp_dir = "temp"
-    os.makedirs(temp_dir, exist_ok=True)
-    temp_path = os.path.join(temp_dir, file.filename)
-
     try:
-        with open(temp_path, "wb") as buffer:
-            buffer.write(await file.read())
-
+        image_bytes = await file.read()
         logger.info(f"Received request to extract features from {file.filename}")
-        lines = services.extract_linear_features(temp_path)
+        lines = services.extract_linear_features(image_bytes)
 
         if lines is None:
             raise HTTPException(status_code=500, detail="Error extracting features")
@@ -75,7 +69,3 @@ async def extract_features_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Error during feature extraction: {e}")
         raise HTTPException(status_code=500, detail=f"Error during feature extraction: {str(e)}")
-    finally:
-        # Clean up the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)

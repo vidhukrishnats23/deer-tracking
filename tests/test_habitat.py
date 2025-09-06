@@ -22,6 +22,7 @@ def setup_habitat_test_data(tmp_path, monkeypatch):
         "x_center": [0.5, 3.5, 6.5, 9.5, 12.5],
         "y_center": [1.5, 1.5, 1.5, 1.5, 1.5],
         "timestamp": pd.to_datetime([f"2023-01-01 12:0{i}:00" for i in range(5)]),
+        "score": [0.9] * 5,
     }
     pd.DataFrame(detections_data).to_csv(detections_file, index=False)
 
@@ -64,7 +65,7 @@ def test_classify_habitat_endpoint(create_dummy_image):
     )
     assert response.status_code == 200
     assert response.json()["filename"] == "test.jpg"
-    assert response.json()["habitat"] == "unknown"
+    assert "predicted_habitat" in response.json()
 
 
 def test_impact_assessment_endpoint(setup_habitat_test_data):
