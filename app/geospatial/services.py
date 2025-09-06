@@ -2,7 +2,7 @@ import rasterio
 from rasterio.crs import CRS
 from rasterio.warp import calculate_default_transform, reproject, Resampling, Resampling
 from rasterio.merge import merge
-from shapely.geometry import box
+from shapely.geometry import box, LineString, MultiLineString
 import geopandas as gpd
 from typing import List
 import os
@@ -99,3 +99,45 @@ def mosaic_images(image_paths: List[str], output_path: str):
 
     for src in src_files_to_mosaic:
         src.close()
+
+
+def calculate_morans_i(gdf, column):
+    """
+    Calculates Moran's I for a given GeoDataFrame and column.
+    """
+    if gdf.empty or column not in gdf.columns:
+        return None, None
+
+    try:
+        from pysal.lib import weights
+        from pysal.explore import esda
+
+        # Create a spatial weights matrix
+        # Using Queen contiguity weights
+        w = weights.Queen.from_dataframe(gdf, use_index=True)
+        w.transform = 'r'
+
+        # Calculate Moran's I
+        moran = esda.moran.Moran(gdf[column], w)
+        return moran.I, moran.p_sim
+    except ImportError:
+        # Handle case where pysal is not installed
+        return None, None
+    except Exception:
+        # Handle other potential errors, e.g., not enough neighbors
+        return None, None
+
+
+def calculate_distance_to_nearest_feature(gdf_points, lines):
+    """
+    Calculates the distance from each point in a GeoDataFrame to the nearest line feature.
+    """
+    if not lines or gdf_points.empty:
+        return [None] * len(gdf_points)
+
+    # The lines from HoughLinesP are in a nested list, so we need to unpack them.
+    line_geometries = [LineString([[l[0][0], l[0][1]], [l[0][2], l[0][3]]]) for l in lines]
+    multi_line = MultiLineString(line_geometries)
+
+    distances = [point.distance(multi_line) for point in gdf_points.geometry]
+    return distances

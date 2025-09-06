@@ -4,6 +4,9 @@ import rasterio
 from rasterio.transform import from_origin
 import numpy as np
 import os
+from shapely.geometry import Point, LineString
+import geopandas as gpd
+from app.geospatial.services import calculate_distance_to_nearest_feature
 
 @pytest.fixture
 def sample_geotiff(tmp_path):
@@ -50,3 +53,21 @@ def test_pixel_to_geo(sample_geotiff):
     x, y = pixel_to_geo(100, 100, sample_geotiff)
     assert x == 110
     assert y == -60
+
+
+def test_calculate_distance_to_nearest_feature():
+    """Test the calculate_distance_to_nearest_feature function."""
+    points = [Point(0, 0), Point(5, 5), Point(10, 10)]
+    gdf_points = gpd.GeoDataFrame(geometry=points)
+
+    lines = [
+        [[0, 1, 10, 1]],  # A horizontal line at y=1
+        [[5, 0, 5, 10]]   # A vertical line at x=5
+    ]
+
+    distances = calculate_distance_to_nearest_feature(gdf_points, lines)
+
+    assert len(distances) == 3
+    assert np.isclose(distances[0], 1.0)  # Distance from (0,0) to line y=1
+    assert np.isclose(distances[1], 0.0)  # Point (5,5) is on the vertical line
+    assert np.isclose(distances[2], 5.0)  # Distance from (10,10) to line x=5

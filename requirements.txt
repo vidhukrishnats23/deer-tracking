@@ -22,3 +22,5 @@ opencv-python-headless>=4.8.0
 folium>=0.14.0,<0.15.0
 imageio>=2.31.5
 exifread>=3.0.0
+pysal>=2.8.0
+pytest-mock>=3.12.0
