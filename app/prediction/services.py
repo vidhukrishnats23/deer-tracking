@@ -7,12 +7,14 @@ import json
 from datetime import datetime
 from app.logger import logger
 import pandas as pd
+from ultralytics import YOLO
 
 
 def get_latest_model_path():
     """
     Get the path to the latest YOLO model.
     If a trained model is available, use it. Otherwise, use the base model.
+    If the base model doesn't exist, download it.
     """
     project_dir = settings.project_name
     if os.path.isdir(project_dir):
@@ -24,15 +26,23 @@ def get_latest_model_path():
                 logger.info(f"Found trained model at {weights_path}")
                 return weights_path
 
-    # If no trained model is found, check if the base model exists
+    # If no trained model is found, check for the base model
     if os.path.exists(settings.yolo_model_path):
         logger.info(f"Using base model at {settings.yolo_model_path}")
         return settings.yolo_model_path
     else:
-        raise FileNotFoundError(
-            f"Model file not found at {settings.yolo_model_path}. "
-            "Please ensure the model is available or run the training pipeline."
-        )
+        # If the base model doesn't exist, try to download it
+        try:
+            logger.warning(f"Base model not found at {settings.yolo_model_path}. Attempting to download...")
+            YOLO(settings.yolo_model_path) # This line will trigger the download
+            logger.info("Base model downloaded successfully.")
+            return settings.yolo_model_path
+        except Exception as e:
+            logger.critical(f"Failed to download the base model: {e}")
+            raise FileNotFoundError(
+                f"Model file not found at {settings.yolo_model_path} and could not be downloaded. "
+                "Please ensure you have an internet connection or run the training pipeline."
+            )
 
 model = None
 

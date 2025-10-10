@@ -210,3 +210,6 @@ __marimo__/
 # Data files
 data/
 temp/
+
+digest.txt
+yolov8n.pt
